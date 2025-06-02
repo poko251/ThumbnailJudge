@@ -42,7 +42,7 @@ def get_video_details(video_ids):
         for item in res["items"]:
             duration_iso = item["contentDetails"]["duration"]  # ISO 8601 format
             seconds = parse_duration(duration_iso).total_seconds()
-            # Odfiltruj shortsy
+            # shorts filtered
             if seconds <= 60:
                 continue
             video_id = item["id"]
@@ -81,7 +81,7 @@ def save_metadata_and_thumbnails(data, out_csv="data/metadata.csv", img_folder="
             print(f"Błąd przy pobieraniu miniatury: {url} - {e}")
     df.to_csv(out_csv, index=False)
 
-# ---- Użycie ----
+#usage
 if __name__ == "__main__":
     channel_id = "UCX6OQ3DkcsbYNE6H8uQQuVA"  # MrBeast 
     video_ids = get_video_list(channel_id, max_results=100)  
