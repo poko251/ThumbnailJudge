@@ -7,7 +7,7 @@ from io import BytesIO
 from isodate import parse_duration
 
 #access
-api_key = "AIzaSyDbPYR_41A_toCjDp-fZp1ZEZwFeaaZ7Mw"
+api_key = ""
 youtube = build("youtube", "v3", developerKey=api_key)
 
 def get_video_list(channel_id, max_results=50):
