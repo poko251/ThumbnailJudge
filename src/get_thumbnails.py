@@ -6,9 +6,16 @@ from PIL import Image
 from io import BytesIO
 from isodate import parse_duration
 
-#access
-api_key = ""
+# access
+# The API key is expected to be provided via the ``YOUTUBE_API_KEY``
+# environment variable. Using an empty key causes the ``build`` call to
+# fail at runtime, so we raise a clear error if the variable is missing.
+api_key = os.getenv("YOUTUBE_API_KEY")
+if not api_key:
+    raise ValueError("Missing YOUTUBE_API_KEY environment variable")
+
 youtube = build("youtube", "v3", developerKey=api_key)
+
 
 def get_video_list(channel_id, max_results=50):
     video_ids = []
@@ -18,10 +25,10 @@ def get_video_list(channel_id, max_results=50):
         req = youtube.search().list(
             part="id",
             channelId=channel_id,
-            maxResults=min(50, max_results-len(video_ids)),
+            maxResults=min(50, max_results - len(video_ids)),
             order="date",
             pageToken=next_page_token,
-            type="video"
+            type="video",
         )
         res = req.execute()
         for item in res["items"]:
@@ -31,14 +38,17 @@ def get_video_list(channel_id, max_results=50):
             break
     return video_ids
 
+
 def get_video_details(video_ids):
     all_data = []
-    for i in range(0, len(video_ids), 50):  # ApI allows to downlaod 50 at one time
-        batch = video_ids[i:i+50]
-        res = youtube.videos().list(
-            part="snippet,statistics,contentDetails",
-            id=",".join(batch)
-        ).execute()
+    # The API allows requesting details for up to 50 videos at once.
+    for i in range(0, len(video_ids), 50):
+        batch = video_ids[i : i + 50]
+        res = (
+            youtube.videos()
+            .list(part="snippet,statistics,contentDetails", id=",".join(batch))
+            .execute()
+        )
         for item in res["items"]:
             duration_iso = item["contentDetails"]["duration"]  # ISO 8601 format
             seconds = parse_duration(duration_iso).total_seconds()
@@ -53,19 +63,24 @@ def get_video_details(video_ids):
             views = int(stats.get("viewCount", 0))
             likes = int(stats.get("likeCount", 0))
             comments = int(stats.get("commentCount", 0))
-            all_data.append({
-                "video_id": video_id,
-                "title": title,
-                "published": published,
-                "thumbnail_url": thumbnail_url,
-                "views": views,
-                "likes": likes,
-                "comments": comments,
-                "duration_seconds": seconds
-            })
+            all_data.append(
+                {
+                    "video_id": video_id,
+                    "title": title,
+                    "published": published,
+                    "thumbnail_url": thumbnail_url,
+                    "views": views,
+                    "likes": likes,
+                    "comments": comments,
+                    "duration_seconds": seconds,
+                }
+            )
     return all_data
 
-def save_metadata_and_thumbnails(data, out_csv="data/metadata.csv", img_folder="data/raw"):
+
+def save_metadata_and_thumbnails(
+    data, out_csv="data/metadata.csv", img_folder="data/raw"
+):
     os.makedirs(img_folder, exist_ok=True)
     df = pd.DataFrame(data)
     df["thumbnail_path"] = None
@@ -81,10 +96,11 @@ def save_metadata_and_thumbnails(data, out_csv="data/metadata.csv", img_folder="
             print(f"Błąd przy pobieraniu miniatury: {url} - {e}")
     df.to_csv(out_csv, index=False)
 
-#usage
+
+# usage
 if __name__ == "__main__":
-    channel_id = "UCX6OQ3DkcsbYNE6H8uQQuVA"  # MrBeast 
-    video_ids = get_video_list(channel_id, max_results=100)  
+    channel_id = "UCX6OQ3DkcsbYNE6H8uQQuVA"  # MrBeast
+    video_ids = get_video_list(channel_id, max_results=100)
     print(f"Pobrano {len(video_ids)} ID filmów.")
     data = get_video_details(video_ids)
     print(f"Pobrano {len(data)} filmów (Shortsy odfiltrowane).")
